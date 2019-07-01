@@ -1,10 +1,18 @@
 ## Creating a model
 
+#preliminary stuff
+
+library(tidyverse)
+library(gtools)
+library(data.table)
+#some of the winter pictures I initially put as unknown, but based on later photos they are c3, and some misspellings
+all_data4<-all_data3 %>% 
+  mutate(plant=fct_recode(plant, "phragmites"="phragmties","c3"="unknown"))
+
 ##### Creating a model for just phragmites
 
 
-#.3 and .5 were chosen as arbitrary min and max values
-
+#.3 and .5 were chosen as arbitrary min and max values, may look into other values
 phragmites<-all_data4 %>%
   filter(plant=="phragmites")
 
@@ -44,8 +52,8 @@ plot_c3<- ggplot(data=data.frame(x=0), mapping = aes(x=x)) + stat_function(fun=f
 plot_c3
 
 
-plot_curves <- ggplot(data=data.frame(x=0), mapping = aes(x=x, colour=plants)) + xlim(0,250) + stat_function(fun=function_c3) + stat_function(fun=function_all) + stat_function(fun=function_phrag)
-plot_curves
+#plot_curves <- ggplot(data=data.frame(x=0), mapping = aes(x=x, colour=plant)) + xlim(0,250) + stat_function(fun=function_c3) + stat_function(fun=function_all) + stat_function(fun=function_phrag)
+#plot_curves
 
 phrag_table<-data.table(DOY=1:250) %>% 
   mutate(Greenness=.3 + .2/(1+exp(-model_phrag[["coefficients"]][2]*DOY-model_phrag[["coefficients"]][1]))) %>%
@@ -66,5 +74,13 @@ all_curves_table<-all_plants_table%>%
 
 ggplot(data=all_curves_table) + geom_point(mapping=aes(x=DOY,y=Greenness, colour=plant))
 
+
+
+#Next goal to see if they will all work at once
+############# Using factors
+
+mylist<-list(phrag_table,c3_table,all_plants_table)
+models<-mylist %>% map(~ lm(logit(Greenness,.3,.5) ~ DOY, data=.x))
+#This worked, but probably there is an easier wayto set it up
 
 

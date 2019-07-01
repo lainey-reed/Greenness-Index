@@ -292,7 +292,7 @@ all_data=data.frame(Filename=character(),ROI=integer(),Date=as.Date(character())
 
 ## Main Loop ###########
 for (i in 1:length(list_pictures)){
-  pic_name<-paste(list.files(getwd(),pattern=".jpg")[i])
+  pic_name<-paste(list.files("./Pics",pattern=".jpg")[i])
   file_name<-substr(pic_name,1,nchar(list_pictures[i])-4)
   current_image<-readJPEG(pic_name)
   #ratio <- dim(current_image)[1]/dim(current_image)[2]
