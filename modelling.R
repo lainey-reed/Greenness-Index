@@ -22,18 +22,21 @@ x_phrag<-phragmites %>% pull(DOY)
 model_phrag <-lm(y_phrag ~ x_phrag)
 
 function_phrag <- function(x) .3 + .2/(1+exp(-model_phrag[["coefficients"]][2]*x-model_phrag[["coefficients"]][1]))
-plot_phrag<- ggplot(data=data.frame(x=0), mapping = aes(x=x)) + stat_function(fun=function_phrag)+xlim(0,250) + geom_point(data = phragmites,mapping=aes(x=DOY,y=Green_Index))
+plot_phrag<- ggplot(data=data.frame(x=0), mapping = aes(x=x)) + 
+  stat_function(fun=function_phrag)+xlim(0,250) + 
+  geom_point(data = phragmites,mapping=aes(x=DOY,y=Green_Index))
 plot_phrag
 
 
-###### Modelling the whole data set
+######## Modelling the whole data set
 y_all<-logit(pull(all_data4,Green_Index),.3,.5)
 x_all<-all_data4 %>% pull(DOY)
 
 model_all <-lm(y_all ~ x_all)
 
 function_all <- function(x) .3 + .2/(1+exp(-model_all[["coefficients"]][2]*x-model_all[["coefficients"]][1]))
-plot_all<- ggplot(data=data.frame(x=0), mapping = aes(x=x)) + stat_function(fun=function_all)+xlim(0,250) + geom_point(data = all_data4,mapping=aes(x=DOY,y=Green_Index))
+plot_all<- ggplot(data=data.frame(x=0), mapping = aes(x=x)) + 
+  stat_function(fun=function_all)+xlim(0,250) + geom_point(data = all_data4,mapping=aes(x=DOY,y=Green_Index))
 plot_all
 
 
@@ -48,7 +51,9 @@ x_c3<-c3 %>% pull(DOY)
 model_c3 <-lm(y_c3 ~ x_c3)
 
 function_c3 <- function(x) .3 + .2/(1+exp(-model_c3[["coefficients"]][2]*x-model_c3[["coefficients"]][1]))
-plot_c3<- ggplot(data=data.frame(x=0), mapping = aes(x=x)) + stat_function(fun=function_c3)+xlim(0,250) + geom_point(data = c3,mapping=aes(x=DOY,y=Green_Index))
+plot_c3<- ggplot(data=data.frame(x=0), mapping = aes(x=x)) + 
+  stat_function(fun=function_c3)+xlim(0,250) + 
+  geom_point(data = c3,mapping=aes(x=DOY,y=Green_Index))
 plot_c3
 
 
@@ -72,15 +77,115 @@ all_curves_table<-all_plants_table%>%
   rbind(phrag_table) %>%
   rbind(c3_table)
 
-ggplot(data=all_curves_table) + geom_point(mapping=aes(x=DOY,y=Greenness, colour=plant))
+ggplot(data=all_curves_table) + 
+  geom_line(mapping=aes(x=DOY,y=Greenness, colour=plant))
 
 
 
 #Next goal to see if they will all work at once
 ############# Using factors
 
-mylist<-list(phrag_table,c3_table,all_plants_table)
-models<-mylist %>% map(~ lm(logit(Greenness,.3,.5) ~ DOY, data=.x))
-#This worked, but probably there is an easier wayto set it up
+##### Manually Creating lists
+# mylist<-list(phrag_table,c3_table,all_plants_table)
+# models<-mylist %>% map(~ lm(logit(Greenness,0,1) ~ DOY, data=.x))
+# #This worked, but probably there is an easier wayto set it up
+# ggplot(data=models[]) + geom_line(mapping=aes(x=DOY,y=Greenness, colour=plant))
+
+#####Creating n models to correspond with n plant groups, will work with any number of plant groups
+
+# Combine everything into groups based on plant types
+plant_list3<- all_data4 %>%
+  group_by(plant) %>%
+  nest()
+
+# Linearize Greenness for each plant group at the same time using map
+plant_model<-plant_list3$data %>% map(~ lm(logit(Green_Index,.3,.5) ~ DOY, data=.x))
+
+# These two functions are necessary to pull the coefficients out of the model
+mod_func<-function(mod) coefficients(mod)[[1]]
+mod_func2<-function(mod) coefficients(mod)[[2]]
+
+# Again using map to create a data table containing each curve which is then graphed using ggplot
+plant_list4<- plant_list3 %>%
+  select(plant) %>%
+  mutate(m1=map_dbl(plant_model,mod_func)) %>%
+  mutate(m2=map_dbl(plant_model,mod_func2)) %>%
+  #Some values did not have enough to come up with curve, they are removed here
+  drop_na() %>%
+  mutate(DOY=list(1:250)) %>%
+  unnest() %>%
+  # formula for logistic curve is in the form: y=ymin+(ymax-ymin)/(1+e^(-m2*DOY+m1))
+  mutate(Greenness_Est=.3+.2/(1+exp(-m2*DOY-m1)))
+
+#plot the line based on color
+ggplot(data=plant_list4) + 
+  geom_line(mapping=aes(x=DOY,y=Greenness_Est, colour=plant)) + 
+  geom_point(data=all_data4,mapping=aes(x=DOY,y=Green_Index,colour=plant))
+
+##### Next goal: model based on location that the photo was taken
+
+#First need make column for each string, should be able to cut the string before the first underscore
+#Then need to do the same methods as the plant except sorting by the location
+library(stringr) #used for string editing
+
+string_list<-all_data4 %>%
+  mutate(location1=substr(Filename,1,str_locate(Filename,"_")-1)) %>%
+  #Some dates have multiple photos of the same site, so there is a number at the end that needs to be removed
+  mutate(location2=stringr::str_replace_all(string_list$location1,"\\d$",""))
 
 
+string_list2 <- string_list %>%
+  group_by(location2) %>%
+  nest()
+## There are some repeat photos of sites on the same day
+
+location_model<-string_list2$data %>% map(~ lm(logit(Green_Index,.3,.5) ~ DOY, data=.x))
+
+#The same functions are going to be used again
+# mod_func<-function(mod) coefficients(mod)[[1]]
+# mod_func2<-function(mod) coefficients(mod)[[2]]
+
+string_list3<- string_list2 %>%
+  mutate(m1=map_dbl(location_model,mod_func)) %>%
+  mutate(m2=map_dbl(location_model,mod_func2)) %>%
+  drop_na() %>%
+  unnest() %>%
+  distinct(location2,plant,.keep_all=TRUE) %>%
+  mutate(DOY2=list(seq(1,250,by=5))) %>%
+  unnest() %>%
+  mutate(Greenness_Est=.3+.2/(1+exp(-m2*DOY2-m1)))
+
+#
+# fun1 <- function(x, y1, y2) .3+.2/(1+exp(-y2*x-y1))
+# function_list<- string_list3 %>%
+#   map2(y1=m1,y2=m2,fun1)
+
+
+ggplot(data=string_list3) + 
+  geom_line(mapping=aes(x=DOY2,y=Greenness_Est,colour=location2)) +
+  geom_point(data=string_list, mapping=aes(x=DOY,y=Green_Index,colour=location2)) +
+  facet_wrap(.~plant)
+
+
+
+##### Looking at error
+
+error_func<- function(mod) fitted.values(mod)
+
+error_location<- string_list2 %>%
+  mutate(fitted_values=map(location_model,error_func)) %>%
+  unnest() %>%
+  drop_na()
+  
+ggplot(data=error_location) + 
+  geom_line(mapping=aes(x=DOY,y=fitted_values,colour=location2)) + 
+  geom_errorbar(mapping=aes(x=DOY,ymax=logit(Green_Index,.3,.5),ymin=fitted_values,colour=location2))
+
+error_plant<- plant_list3 %>%
+  mutate(fitted_values=map(plant_model,error_func)) %>%
+  unnest() %>%
+  drop_na()
+
+ggplot(data=error_plant) + 
+  geom_line(mapping=aes(x=DOY,y=fitted_values,colour=plant)) + 
+  geom_errorbar(mapping=aes(x=DOY,ymax=logit(Green_Index,.3,.5),ymin=fitted_values,colour=plant))
