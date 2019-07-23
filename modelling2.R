@@ -641,6 +641,11 @@ ggplot(data=all_data_tested8)+
 
 
 ########################################
+#So here I am trying to use multstart to do multiple nls runs at once, with each plant species
+# I also went through in excel and edited the plant groups
+#plants_edited has plant groups mixed changed to have specific species
+#They are divided into major and minor, not sure if I will use the minor
+#Will need to change the exctract VIs to include this
 
 library(nls.multstart)
 
@@ -669,38 +674,89 @@ non_linear_model <- function(DOY,minGI,maxGI,mS,S,mA,A) {
   GI_est <- minGI + (maxGI-minGI)*(1/(1+exp(-mS*(DOY-S)))+1/(1+exp(mA*(DOY-A)))-1)
   return(GI_est)
 }
+
+#heres the multstart function, it needs an upper and lower bound which is useful since they vary by species somewhat
 non_linear_fit <- all_data_edited_plants3 %>%
   group_by(Major_Plants) %>%
   nest() %>%
   mutate(fit=purrr::map(data,~nls_multstart(Green_Index ~ non_linear_model(DOY=DOY,minGI,maxGI,mS,S,mA,A),
                                             data=.x,
                                             iter=500,
-                                            start_lower=c(minGI=.32,maxGI=.375,mS=.05,S=100,mA=.001,A=200),
-                                            start_upper =c(minGI=.35,maxGI=.52,mS=.3,S=160,mA=.1,A=275),
+                                            start_lower=c(minGI=.32,maxGI=.375,mS=.1,S=115,mA=.001,A=200),
+                                            start_upper =c(minGI=.34,maxGI=.52,mS=.3,S=150,mA=.1,A=275),
                                             supp_errors = "N")))
 
+#according to the tutorial I should just be able to use broom, but it's not working
 select(non_linear_fit,Major_Plants,data,fit)
+fit<-non_linear_fit$fit
 
-non_linear_fit2<-non_linear_fit %>%
-  filter(!is.null(fit))
+minGI_func<-function(list1) coefficients(list1)[["minGI"]]
 
-info<-glimpse(non_linear_fit$fit)
-params<-non_linear_fit %>% tidy(fit)
-params <- non_linear_fit %>%
-  unnest(fit %>% map(tidy))
+fit2<-map(fit,mod_func3) 
+fit3<-fit2[-10]
 
-CI<- non_linear_fit %>%
-  unnest(fit%>% map(~confint2(.x) %>%
-                     data.frame() %>%
-                      rename(.,conf.low=X2.5..,conf.high=X97.5..))) %>%
-  group_by(.,Major_Plants) %>%
-  mutate(.,term=x('minGI',"maxGI","mS","S","mA","A")) %>%
-  ungroup()
+fit3<-transpose(as.data.frame(fit3))
+names(fit3)<-c("minGI","maxGI","mS","S","mA","A")
 
-params<- merge(params,CI,by=intersect(names(params),names(CI)))
-preds<-non_linear_fit %>%
-  unnest(fit %>% map(augment))
+fit3 <- fit3 %>%
+  mutate(Y=1:11)
 
-select(info,)
+#here's all the data with all the coefficients
+#typha got removed, not enough data points
+#also need to remove 2, 7,8,9
+all_data_edited_plants4<-all_data_edited_plants3 %>%
+  group_by(Major_Plants) %>%
+  nest() %>%
+  filter(Major_Plants!="typha_") %>%
+  mutate(Y=1:11) %>%
+  left_join(fit3,by="Y") %>%
+  select(-Y) %>%
+  filter(Major_Plants!="c4_" & Major_Plants!="iva_phragmites" & Major_Plants!="spartina_" & Major_Plants!="c4_iva") %>%
+  select(-data)
+
+all_data_edited_plants5<- all_data_edited_plants4 %>%
+  mutate(DOY=list(seq(1,365,by=5))) %>%
+  unnest() %>%
+  mutate(Green_Est=minGI + (maxGI-minGI)*(1/(1+exp(-mS*(DOY-S)))+1/(1+exp(mA*(DOY-A)))-1))
+
+ggplot(all_data_edited_plants5) +
+  geom_line(mapping=aes(x=DOY,y=Green_Est,color=Major_Plants)) +
+  geom_point(data=all_data_edited_plants3,mapping=aes(x=DOY,y=Green_Index,color=Major_Plants))
 
 
+all_data_edited_plants6<- all_data_edited_plants3 %>%
+  separate_rows(Major_Plants) %>%
+  filter(Major_Plants!="") 
+
+non_linear_fit2 <- all_data_edited_plants6 %>%
+  group_by(Major_Plants) %>%
+  nest() %>%
+  mutate(fit=purrr::map(data,~nls_multstart(Green_Index ~ non_linear_model(DOY=DOY,minGI,maxGI,mS,S,mA,A),
+                                            data=.x,
+                                            iter=500,
+                                            start_lower=c(minGI=.32,maxGI=.375,mS=.1,S=115,mA=.001,A=200),
+                                            start_upper =c(minGI=.34,maxGI=.52,mS=.3,S=150,mA=.1,A=275),
+                                            supp_errors = "N")))
+
+## using this everything converges!!!!
+
+fit_model2<-non_linear_fit2$fit
+fit_model2_2<-transpose(as.data.frame(map(fit_model2,mod_func3)))
+names(fit_model2_2)<-c("minGI","maxGI","mS","S","mA","A")
+fit_model2_2<-fit_model2_2 %>%
+  mutate(Y=1:6)
+
+all_data_edited_plants7<-all_data_edited_plants6 %>%
+  group_by(Major_Plants) %>%
+  nest() %>%
+  mutate(Y=1:6) %>%
+  left_join(fit_model2_2,by="Y") %>%
+  select(-Y) %>%
+  select(-data) %>%
+  mutate(DOY=list(seq(1,365,by=5))) %>%
+  unnest() %>%
+  mutate(Green_Est=minGI + (maxGI-minGI)*(1/(1+exp(-mS*(DOY-S)))+1/(1+exp(mA*(DOY-A)))-1))
+
+ggplot(all_data_edited_plants7) +
+  geom_line(mapping=aes(x=DOY,y=Green_Est,color=Major_Plants)) +
+  geom_point(data=all_data_edited_plants6,mapping=aes(x=DOY,y=Green_Index,color=Major_Plants))
