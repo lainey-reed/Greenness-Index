@@ -1,12 +1,15 @@
 # Greenness-Index
-R code for photo analysis for greenness indices
 
 Lainey Reed
 ekr42@cornell.edu
 
-The code in this repository is based off of the package phenopix, which is designed to work with a mounted camera to calculate various vegetation indices over a large photoset. Instead of a mounted camera, the two functions in the script titled "extractVIs7.R" work with a photoset where the vantage changes often, allowing the user of the code to draw a number of regions in each photo and identify the plants within them. 
+## Introduction
 
-Using these two functions, I was able to fit the Green Index data to multiple curves, sorted by plant group, with a set of photos taken in the Smithonsian Environmetnal Research Center's Global Change Research Wetland (GCREW) (All photos obtained from the @GCREW Facebook page). The data could be useful for determining key phenological transitions from an exisitng photo set, and could be used to compare seasonal phenology between years. I hope to come back at the end of this year and run the code with the photos from the remainder of 2019 and compare between the two years. Contained within this repository is the full set of visual index data which was run with 650 images from the GCREW facebook page, as well as a subset of that data with the corresponding images, regions of interest (ROIs) and figures for the fitted data to use as an example.
+The R code in this repository is based off of the package phenopix, which is designed to work with a mounted camera to calculate various vegetation indices over a large photoset. Instead of a mounted camera, the two functions in the script titled "extractVIs7.R" work with a photoset where the vantage changes often, allowing the user of the code to draw a number of regions in each photo and identify the plants within them. 
+
+Using these two functions, I was able to fit the Green Index data to multiple curves, sorted by plant group, with a set of photos taken in the Smithonsian Environmetnal Research Center's Global Change Research Wetland (GCREW) (All photos obtained from the @GCREW Facebook page). The data could be useful for determining key phenological transitions from an exisitng photo set, and could be used to compare seasonal phenology between years. I hope to come back at the end of this year and run the code with the photos from the remainder of 2019 and compare between the two years. 
+
+Contained within this repository is the full set of visual index data which was run with 650 images from the GCREW facebook page, as well as a subset of that data with the corresponding images, regions of interest (ROIs) and figures for the fitted data to use as an example.
 
 ## How to use this repository
 
@@ -52,7 +55,6 @@ The second function takes the region and extracts VIs from it automatically.
 This script takes the VI data from the previously saved "VI_data.csv" and is able to fit a non linear double logistic curve to the data. The shape of the curve was taken from Forbrich et. al 2018. The code fits curves separated by years and plant groups. All plots are saved as pdfs to the folder "Figures."
 
 ### Citations
-
 
 Forbrich, I., Giblin, A. E., & Hopkinson, C. S. (2018). Constraining marsh carbon budgets using long‐term C burial and contemporary atmospheric CO2 fluxes. Journal of Geophysical Research: Biogeosciences, 123(3), 867-878.
 
