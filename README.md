@@ -11,6 +11,15 @@ Using these two functions, I was able to fit the Green Index data to multiple cu
 
 Contained within this repository is the full set of visual index data which was run with 650 images from the GCREW facebook page, as well as a subset of that data with the corresponding images, regions of interest (ROIs) and figures for the fitted data to use as an example.
 
+
+<p align="center">
+<img src="https://raw.githubusercontent.com/lainey-reed/Greenness-Index/master/Figures/Fitted_Curves.jpg" heights=720 width=1260>
+</p>
+
+<p align="center">
+  Fit curves with subset of data
+  </p>
+
 ## How to use this repository
 
 The ideal dataset for this project is one with an inconsistent vantage point and with a large amount of photos over the entire year. For this model to work, there need to be photos of dead plants at the beginning and end of the growing season, and throughout the length of the green up and green down. 
