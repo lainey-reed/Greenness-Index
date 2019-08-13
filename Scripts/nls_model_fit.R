@@ -22,8 +22,8 @@ all_data<-read.csv(file=("./VIs/VI_data.csv"))
 
 
 #Next step: separate major plant groups, make location a column
-all_data_sample7<- all_data_sample6 %>%
-#  separate_rows(Major_Plants,sep=" ") %>%
+all_data2<- all_data %>%
+  separate_rows(Major_Plants,sep=" ") %>%
   #Filename format should mean that first underscore is before the date
   mutate(location1=substr(Filename,1,str_locate(Filename,"_")-1)) %>%
   #Some dates have multiple photos of the same site, so there is a number at the end that needs to be removed
@@ -94,7 +94,7 @@ ggplot(params2) +
   xlab('Plant') +
   ylab('')
 
-ggsave("./Figures/Confidence_Intervals.pdf", plot = last_plot())
+ggsave("./Figures/Confidence_Intervals.jpg", plot = last_plot())
 
 #graph of actual values and calculated values for those days
 ggplot(preds) +
@@ -103,4 +103,4 @@ ggplot(preds) +
 # scale_color_manual(values=c("#99CC00","#FF9900"))+
   ggtitle("DOY vs. Green Index of all data \nSorted by Major Plant Communities")
 
-ggsave("./Figures/Fitted_Curves.pdf", plot = last_plot())
+ggsave("./Figures/Fitted_Curves.jpg", plot = last_plot())
